@@ -9,7 +9,7 @@ from selenium.webdriver.support import expected_conditions as EC
 
 import pandas as pd
 import tempfile
-import time
+
 
 app = Flask(__name__)
 CORS(app)
@@ -97,8 +97,9 @@ def process_results():
     df = pd.read_excel(temp_input.name, dtype=str)
     df.columns = df.columns.str.strip()
 
-    if "Register No" not in df.columns or "DOB" not in df.columns:
-        return jsonify({"error": "Excel must contain Register No and DOB"}), 400
+    if "Name" not in df.columns or "Register No" not in df.columns or "DOB" not in df.columns:
+    return jsonify({"error": "Excel must contain Name, Register No and DOB"}), 400
+       
 
     # -------------------------------
     # Selenium Chrome (CLOUD SAFE)
