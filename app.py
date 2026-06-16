@@ -78,6 +78,11 @@ def get_student_results(driver, reg_no, dob):
 # -------------------------------
 # API endpoint
 # -------------------------------
+
+@app.route("/")
+def home():
+    return "Service is live"
+
 @app.route('/process-results', methods=['POST'])
 def process_results():
 
