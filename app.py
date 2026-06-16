@@ -10,22 +10,17 @@ from selenium.webdriver.support import expected_conditions as EC
 import pandas as pd
 import tempfile
 
-
 app = Flask(__name__)
 CORS(app)
 
 RESULTS_URL = "https://egovernance.unom.ac.in/results/ugresult.asp"
 
 
-# -------------------------------
-# Extract results from table
-# -------------------------------
 def extract_results(driver):
     tables = driver.find_elements(By.TAG_NAME, "table")
 
     for table in tables:
         if "Subject Code" in table.text:
-
             rows = table.find_elements(By.TAG_NAME, "tr")
             results = {}
 
@@ -42,11 +37,7 @@ def extract_results(driver):
     return {}
 
 
-# -------------------------------
-# Fetch result for one student
-# -------------------------------
 def get_student_results(driver, reg_no, dob):
-
     driver.get(RESULTS_URL)
 
     try:
@@ -75,21 +66,17 @@ def get_student_results(driver, reg_no, dob):
         return {}
 
 
-# -------------------------------
-# API endpoint
-# -------------------------------
-
 @app.route("/")
 def home():
     return "Service is live"
 
-@app.route('/process-results', methods=['POST'])
-def process_results():
 
-    if 'file' not in request.files:
+@app.route("/process-results", methods=["POST"])
+def process_results():
+    if "file" not in request.files:
         return jsonify({"error": "No file uploaded"}), 400
 
-    file = request.files['file']
+    file = request.files["file"]
 
     temp_input = tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx")
     file.save(temp_input.name)
@@ -97,13 +84,15 @@ def process_results():
     df = pd.read_excel(temp_input.name, dtype=str)
     df.columns = df.columns.str.strip()
 
-    if "Name" not in df.columns or "Register No" not in df.columns or "DOB" not in df.columns:
-    return jsonify({"error": "Excel must contain Name, Register No and DOB"}), 400
-       
+    if (
+        "Name" not in df.columns
+        or "Register No" not in df.columns
+        or "DOB" not in df.columns
+    ):
+        return jsonify(
+            {"error": "Excel must contain Name, Register No and DOB"}
+        ), 400
 
-    # -------------------------------
-    # Selenium Chrome (CLOUD SAFE)
-    # -------------------------------
     options = webdriver.ChromeOptions()
     options.add_argument("--headless=new")
     options.add_argument("--no-sandbox")
@@ -111,19 +100,13 @@ def process_results():
     options.add_argument("--disable-gpu")
     options.add_argument("--window-size=1920,1080")
 
-    # IMPORTANT: Docker/Linux chromedriver path
     service = Service("/usr/bin/chromedriver")
-
     driver = webdriver.Chrome(service=service, options=options)
 
     all_subjects = set()
     results_store = {}
 
-    # -------------------------------
-    # Process each student
-    # -------------------------------
     for _, row in df.iterrows():
-
         reg = row["Register No"]
         dob = row["DOB"]
 
@@ -139,16 +122,10 @@ def process_results():
 
     driver.quit()
 
-    # -------------------------------
-    # Add new columns
-    # -------------------------------
     for subject in all_subjects:
         if subject not in df.columns:
             df[subject] = ""
 
-    # -------------------------------
-    # Fill results into dataframe
-    # -------------------------------
     for i, row in df.iterrows():
         reg = row["Register No"]
 
@@ -158,9 +135,6 @@ def process_results():
         for subject, mark in results_store[reg].items():
             df.loc[i, subject] = mark
 
-       # -------------------------------
-    # Save output file
-    # -------------------------------
     output_file = tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx")
     df.to_excel(output_file.name, index=False)
 
@@ -170,7 +144,7 @@ def process_results():
     response = send_file(
         output_file.name,
         as_attachment=True,
-        download_name="updated_results.xlsx"
+        download_name="updated_results.xlsx",
     )
 
     response.headers["X-Total-Students"] = str(total_count)
@@ -178,8 +152,6 @@ def process_results():
 
     return response
 
-# -------------------------------
-# Run app
-# -------------------------------
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
