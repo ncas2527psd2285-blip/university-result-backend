@@ -157,18 +157,25 @@ def process_results():
         for subject, mark in results_store[reg].items():
             df.loc[i, subject] = mark
 
-    # -------------------------------
+       # -------------------------------
     # Save output file
     # -------------------------------
     output_file = tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx")
     df.to_excel(output_file.name, index=False)
 
-    return send_file(
+    fetched_count = sum(1 for res in results_store.values() if len(res) > 0)
+    total_count = len(results_store)
+
+    response = send_file(
         output_file.name,
         as_attachment=True,
         download_name="updated_results.xlsx"
     )
 
+    response.headers["X-Total-Students"] = str(total_count)
+    response.headers["X-Fetched-Students"] = str(fetched_count)
+
+    return response
 
 # -------------------------------
 # Run app
